@@ -86,12 +86,11 @@ jobs:
         with:
           name: model-artifacts
           path: .
-
       - name: Move Model and Scaler to App Folder
         if: steps.compare.outputs.improved == 'true'
         run: |
-          mv outputs/model.pkl app/model.pkl
-          mv outputs/scaler.pkl app/scaler.pkl
+          mv model.pkl app/model.pkl
+          mv scaler.pkl app/scaler.pkl
 
       - name: Login to Docker Hub
         if: steps.compare.outputs.improved == 'true'
