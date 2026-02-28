@@ -6,7 +6,7 @@ on:
       - main
 
 env:
-  IMAGE_NAME: wine_predict_2022bcs0162
+  IMAGE_NAME: red_wine_predict_2022bcs0162
 
 jobs:
 
