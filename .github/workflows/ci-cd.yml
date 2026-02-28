@@ -1,4 +1,4 @@
-name: Wine Model CI/CD Pipeline
+name: Red Wine Model CI/CD Pipeline
 
 on:
   push:
