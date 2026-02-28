@@ -5,6 +5,9 @@ on:
     branches:
       - main
 
+env:
+  IMAGE_NAME: wine_predict_2022bcs0162
+
 jobs:
 
   # ============================
@@ -60,11 +63,6 @@ jobs:
       - name: Compare Metrics
         id: compare
         run: |
-          echo "Current R2: ${{ needs.train.outputs.r2 }}"
-          echo "Current MSE: ${{ needs.train.outputs.mse }}"
-          echo "Best R2: ${{ vars.BEST_R2 }}"
-          echo "Best MSE: ${{ vars.BEST_MSE }}"
-
           if (( $(echo "${{ needs.train.outputs.r2 }} > ${{ vars.BEST_R2 }}" | bc -l) )) && \
              (( $(echo "${{ needs.train.outputs.mse }} < ${{ vars.BEST_MSE }}" | bc -l) )); then
             echo "improved=true" >> $GITHUB_OUTPUT
@@ -86,7 +84,8 @@ jobs:
         with:
           name: model-artifacts
           path: .
-      - name: Move Model and Scaler to App Folder
+
+      - name: Move Model and Scaler
         if: steps.compare.outputs.improved == 'true'
         run: |
           mv model.pkl app/model.pkl
@@ -99,12 +98,24 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_TOKEN }}
 
-      - name: Build Docker Image
+      - name: Build Docker Image with Auto Version
         if: steps.compare.outputs.improved == 'true'
         run: |
-          docker build -t ${{ secrets.DOCKER_USERNAME }}/wine_predict_2022bcs0162:latest ./app
+          VERSION=v${{ github.run_number }}
+          echo "Deploying version: $VERSION"
 
-      - name: Push Docker Image
+          docker build \
+            -t ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:$VERSION \
+            -t ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:latest \
+            ./app
+
+          docker push ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:$VERSION
+          docker push ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:latest
+
+      - name: Update Best Metrics
         if: steps.compare.outputs.improved == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
-          docker push ${{ secrets.DOCKER_USERNAME }}/wine_predict_2022bcs0162:latest
+          gh variable set BEST_R2 --body "${{ needs.train.outputs.r2 }}"
+          gh variable set BEST_MSE --body "${{ needs.train.outputs.mse }}"
